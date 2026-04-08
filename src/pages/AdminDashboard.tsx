@@ -87,30 +87,30 @@ export default function AdminDashboard() {
         setSubscribers(subs || []);
       }
 
-      // 3. Fetch posts with author info
+      // 3. Fetch posts (without join to avoid FK relationship issues)
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profiles:user_id(name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (postsError) {
         console.error('Error fetching posts:', postsError);
         toast.error('Failed to load posts');
       } else {
-        // Format posts with author info
-        const formattedPosts: Post[] = (postsData || []).map((post: any) => ({
-          ...post,
-          author: post.profiles ? {
-            name: post.profiles.name || post.user_name,
-            email: post.profiles.email
-          } : {
-            name: post.user_name,
-            email: 'Unknown'
-          }
-        }));
+        // Format posts with author info by matching user_id to profiles
+        const formattedPosts: Post[] = (postsData || []).map((post: any) => {
+          const author = allProfiles.find(p => p.id === post.user_id);
+          return {
+            ...post,
+            author: author ? {
+              name: author.name || post.user_name,
+              email: author.email
+            } : {
+              name: post.user_name,
+              email: 'Unknown'
+            }
+          };
+        });
         setPosts(formattedPosts);
       }
 
